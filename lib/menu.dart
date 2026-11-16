@@ -7,10 +7,12 @@ class MyHomePage extends StatelessWidget {
   final String nama = "Adinata Alaudin Pranaja";
   final String kelas = "PBP C";
 
+  // Warna memakai tingkat 700 (biru, hijau, merah) agar teks putih tetap
+  // kontras dan mudah dibaca di atas latar setiap kartu.
   static const List<ItemHomepage> items = [
-    ItemHomepage("Lihat Proyek", Icons.folder),
-    ItemHomepage("Tambah Proyek", Icons.add_circle),
-    ItemHomepage("Logout", Icons.logout),
+    ItemHomepage("Lihat Experience", Icons.work_history, Color(0xFF1976D2)),
+    ItemHomepage("Tambah Experience", Icons.add_circle, Color(0xFF388E3C)),
+    ItemHomepage("Logout", Icons.logout, Color(0xFFD32F2F)),
   ];
 
   @override
@@ -112,11 +114,16 @@ class InfoCard extends StatelessWidget {
   }
 }
 
+/// Model data satu tombol menu: label, ikon, dan warna latar kartunya.
+///
+/// Warna disimpan di model sehingga [ItemCard] cukup membaca [color]
+/// tanpa percabangan per tombol.
 class ItemHomepage {
   final String name;
   final IconData icon;
+  final Color color;
 
-  const ItemHomepage(this.name, this.icon);
+  const ItemHomepage(this.name, this.icon, this.color);
 }
 
 class ItemCard extends StatelessWidget {
@@ -127,8 +134,8 @@ class ItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      // Menggunakan warna sekunder dari skema tema aplikasi.
-      color: Theme.of(context).colorScheme.secondary,
+      // Menggunakan warna latar milik masing-masing tombol.
+      color: item.color,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         // Aksi ketika kartu ditekan oleh pengguna.

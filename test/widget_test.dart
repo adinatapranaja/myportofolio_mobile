@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:myportofolio_mobile/main.dart';
@@ -19,25 +20,45 @@ void main() {
       expect(find.text(value), findsOneWidget);
     }
     expect(find.byType(ItemCard), findsNWidgets(3));
-    for (final item in MyHomePage.items) {
-      expect(find.text(item.name), findsOneWidget);
+    for (final name in ['Lihat Experience', 'Tambah Experience', 'Logout']) {
+      expect(find.text(name), findsOneWidget);
     }
   });
 
-  testWidgets('Tapping a menu button shows a SnackBar', (
+  testWidgets('Each menu button has its own background color', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Lihat Proyek'));
-    await tester.pump();
-    expect(
-      find.text('Kamu telah menekan tombol Lihat Proyek!'),
-      findsOneWidget,
-    );
+    final colors = [
+      for (final item in MyHomePage.items)
+        tester
+            .widget<Material>(
+              find
+                  .ancestor(
+                    of: find.text(item.name),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .color,
+    ];
+    expect(colors, MyHomePage.items.map((item) => item.color).toList());
+    expect(colors.toSet().length, MyHomePage.items.length);
+  });
 
-    await tester.tap(find.text('Logout'));
-    await tester.pump();
-    expect(find.text('Kamu telah menekan tombol Logout!'), findsOneWidget);
+  testWidgets('Tapping each menu button shows a matching SnackBar', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    for (final item in MyHomePage.items) {
+      await tester.tap(find.text(item.name));
+      await tester.pump();
+      expect(
+        find.text('Kamu telah menekan tombol ${item.name}!'),
+        findsOneWidget,
+      );
+    }
   });
 }
