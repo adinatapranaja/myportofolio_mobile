@@ -15,6 +15,9 @@ void main() {
     for (final label in ['NPM', 'Name', 'Class']) {
       expect(find.text(label), findsOneWidget);
     }
+    for (final value in ['2506656356', 'Adinata Alaudin Pranaja', 'PBP C']) {
+      expect(find.text(value), findsOneWidget);
+    }
     expect(find.byType(ItemCard), findsNWidgets(3));
     for (final item in MyHomePage.items) {
       expect(find.text(item.name), findsOneWidget);

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
 
-  final String npm = "2406000001";
-  final String nama = "Burhan";
-  final String kelas = "PBP A";
+  final String npm = "2506656356";
+  final String nama = "Adinata Alaudin Pranaja";
+  final String kelas = "PBP C";
 
   static const List<ItemHomepage> items = [
     ItemHomepage("Lihat Proyek", Icons.folder),
@@ -32,13 +32,18 @@ class MyHomePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Baris horizontal untuk menampilkan 3 InfoCard secara sejajar.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                InfoCard(title: 'NPM', content: npm),
-                InfoCard(title: 'Name', content: nama),
-                InfoCard(title: 'Class', content: kelas),
-              ],
+            // IntrinsicHeight + stretch membuat ketiga kartu setinggi kartu
+            // tertinggi, sehingga nama yang turun ke dua baris tetap rapi.
+            IntrinsicHeight(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  InfoCard(title: 'NPM', content: npm),
+                  InfoCard(title: 'Name', content: nama),
+                  InfoCard(title: 'Class', content: kelas),
+                ],
+              ),
             ),
             const SizedBox(height: 16.0),
             // Bagian tengah: pesan sambutan dan kisi tombol menu portofolio.
@@ -99,7 +104,7 @@ class InfoCard extends StatelessWidget {
           children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8.0),
-            Text(content),
+            Text(content, textAlign: TextAlign.center),
           ],
         ),
       ),
