@@ -61,4 +61,23 @@ void main() {
       );
     }
   });
+
+  testWidgets('Drawer opens and Home returns to the menu page', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyApp());
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('My Portfolio'), findsOneWidget);
+    expect(
+      find.text('Explore personal projects and experiences!'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('My Portfolio'), findsNothing);
+    expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
+  });
 }
