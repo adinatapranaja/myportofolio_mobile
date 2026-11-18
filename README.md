@@ -7,7 +7,7 @@ Aplikasi mobile portofolio pribadi milik **Adinata Alaudin Pranaja** untuk mata 
 
 ## Menjalankan proyek secara lokal
 
-Prasyarat: Flutter SDK (channel stable) dan Google Chrome. Proyek ini dikembangkan dengan Flutter 3.38 dan Dart 3.10.
+Prasyarat: Flutter SDK (channel stable) dan Google Chrome. Proyek ini dikembangkan dengan Flutter 3.38 dan diperbarui ke Flutter 3.50 sejak Tutorial 9, sehingga widget Material diimpor dari paket `material_ui`.
 
 ```bash
 # Periksa kelengkapan toolchain
@@ -36,8 +36,13 @@ flutter test
 ```text
 myportofolio_mobile/
 ├── lib/
-│   ├── main.dart   # Entry point: MyApp, MaterialApp, dan tema warna
-│   └── menu.dart   # Halaman utama, InfoCard, ItemHomepage, dan ItemCard
+│   ├── main.dart                # Entry point: MyApp, MaterialApp, dan tema warna
+│   ├── screens/
+│   │   ├── menu.dart            # Halaman utama, InfoCard, dan ItemHomepage
+│   │   └── project_form.dart    # Halaman formulir tambah proyek
+│   └── widgets/
+│       ├── left_drawer.dart     # Drawer navigasi antarhalaman
+│       └── project_card.dart    # ItemCard: tombol menu, SnackBar, dan navigasi
 ├── test/
 │   └── widget_test.dart
 ├── pubspec.yaml    # Manifes proyek dan dependency
@@ -66,6 +71,27 @@ Beberapa penyesuaian dari contoh tutorial:
 - `/android/build/` ditambahkan ke `.gitignore` agar hasil build Android tidak ikut ter-commit.
 
 Sumber: [Tutorial 8 PBP](https://pbp.cs.ui.ac.id/tutorial/tutorial-8.html).
+
+### Tutorial 9 — Flutter Navigation, Layouts, Forms, and Input Elements
+
+Tutorial 9 menambahkan perpindahan antarhalaman, formulir dengan validasi, dan struktur folder yang lebih rapi.
+
+1. **Migrasi `material_ui`.** Mulai Flutter 3.50, pustaka Material dipindahkan ke paket terpisah. Paket ditambahkan dengan `flutter pub add material_ui`, lalu setiap `import 'package:flutter/material.dart';` diganti `import 'package:material_ui/material_ui.dart';` sehingga `flutter analyze` tidak lagi menampilkan peringatan *deprecated*.
+2. **Navigator.** Flutter menyimpan halaman (*route*) sebagai tumpukan. `push()` menaruh halaman baru di atas tumpukan, `pop()` membuang halaman teratas, dan `pushReplacement()` mengganti halaman teratas tanpa menyisakan halaman lama di bawahnya.
+3. **Drawer.** `LeftDrawer` di `widgets/left_drawer.dart` berisi `DrawerHeader` serta menu **Home** dan **Add Project**. Keduanya memakai `pushReplacement()` agar berpindah lewat drawer tidak menumpuk halaman. Drawer dipasang melalui properti `drawer` pada `Scaffold` halaman utama dan halaman form.
+4. **Formulir.** `ProjectFormPage` adalah `StatefulWidget` karena menyimpan isian pengguna. `Form` memakai `GlobalKey<FormState>` untuk menjalankan validasi dan mengatur ulang isian. Field yang tersedia adalah nama proyek, deskripsi, kategori (`DropdownButtonFormField` dengan `initialValue`), teknologi, dan tautan. Nama dan deskripsi wajib diisi melalui `validator`, sedangkan `onChanged` menyimpan nilai ke state dengan `setState()`.
+5. **Menampilkan data.** Tombol **Save** menjalankan `validate()`. Jika lolos, `showDialog()` menampilkan `AlertDialog` berisi seluruh isian. Tombol **OK** menutup dialog dengan `Navigator.pop()` lalu mengosongkan formulir dengan `reset()`.
+6. **Navigasi dari tombol menu.** Setelah menampilkan `SnackBar`, `ItemCard` membuka halaman form dengan `Navigator.push()`, sehingga tombol Back sistem atau browser mengembalikan pengguna ke halaman menu.
+7. **Refactoring.** Halaman dipindahkan ke `lib/screens/`, sedangkan widget yang dipakai ulang dipindahkan ke `lib/widgets/`. `ItemCard` dipisahkan dari `menu.dart` ke `widgets/project_card.dart`, lalu seluruh import disesuaikan.
+
+Beberapa penyesuaian dari contoh tutorial:
+
+- Navigasi ke form dipicu oleh tombol **Tambah Experience**, karena tombol menu sudah disesuaikan dengan bagian Experience pada Tugas 7. Untuk sementara tombol ini membuka formulir proyek dari tutorial; formulir Experience dibuat pada Tugas 8.
+- Judul `DrawerHeader` dibungkus `FittedBox` dan subjudulnya dibungkus `Flexible`. Tinggi `DrawerHeader` tetap, sehingga tanpa penyesuaian ini isi header meluap (*overflow*) ketika teks dirender lebih besar.
+- Halaman form tidak menampilkan tombol kembali di `AppBar` karena posisi tersebut dipakai ikon drawer. Pengguna kembali melalui tombol Back sistem atau browser, sesuai alur tutorial.
+- Widget test ditambah untuk memeriksa drawer, perbedaan `push()` dan `pushReplacement()` melalui `Navigator.canPop()`, validasi formulir, serta isi dialog. Tidak ada komentar `TODO` yang tersisa.
+
+Sumber: [Tutorial 9 PBP](https://pbp.cs.ui.ac.id/tutorial/tutorial-9.html).
 
 ## Refleksi
 
