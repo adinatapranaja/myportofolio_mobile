@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:myportofolio_mobile/main.dart';
+import 'package:myportofolio_mobile/screens/experience_form.dart';
 import 'package:myportofolio_mobile/screens/menu.dart';
 import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
@@ -21,8 +22,13 @@ void main() {
     for (final value in ['2506656356', 'Adinata Alaudin Pranaja', 'PBP C']) {
       expect(find.text(value), findsOneWidget);
     }
-    expect(find.byType(ItemCard), findsNWidgets(3));
-    for (final name in ['Lihat Experience', 'Tambah Experience', 'Logout']) {
+    expect(find.byType(ItemCard), findsNWidgets(4));
+    for (final name in [
+      'Lihat Experience',
+      'Tambah Experience',
+      'Tambah Proyek',
+      'Logout',
+    ]) {
       expect(find.text(name), findsOneWidget);
     }
   });
@@ -55,6 +61,7 @@ void main() {
     await tester.pumpWidget(const MyApp());
 
     for (final item in MyHomePage.items) {
+      await tester.ensureVisible(find.text(item.name));
       await tester.tap(find.text(item.name));
       await tester.pumpAndSettle();
       expect(
@@ -62,27 +69,66 @@ void main() {
         findsOneWidget,
       );
       // Tombol tambah berpindah ke halaman form; kembali ke menu dulu.
-      if (find.byType(ProjectFormPage).evaluate().isNotEmpty) {
+      if (item.destination != null) {
         await tester.binding.handlePopRoute();
         await tester.pumpAndSettle();
       }
     }
   });
 
-  testWidgets('Add button pushes the form and Back returns to the menu', (
+  for (final (button, title) in [
+    ('Tambah Experience', 'Add Experience Form'),
+    ('Tambah Proyek', 'Add Project Form'),
+  ]) {
+    testWidgets('$button card pushes its form and Back returns to the menu', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(const MyApp());
+
+      await tester.ensureVisible(find.text(button));
+      await tester.tap(find.text(button));
+      await tester.pumpAndSettle();
+      expect(find.text(title), findsOneWidget);
+      // push() menumpuk form di atas menu, jadi masih ada halaman di bawahnya.
+      expect(
+        tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+        true,
+      );
+
+      // Menyimulasikan tombol Back sistem/browser.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Selamat datang di MyPortfolio Mobile!'),
+        findsOneWidget,
+      );
+    });
+  }
+
+  testWidgets('Drawer Add Experience opens the form and Home returns', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const MyApp());
 
-    await tester.tap(find.text('Tambah Experience'));
+    await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    expect(find.text('Add Project Form'), findsOneWidget);
-    // push() menumpuk form di atas menu, jadi masih ada halaman di bawahnya.
-    expect(tester.state<NavigatorState>(find.byType(Navigator)).canPop(), true);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Add Project'), findsOneWidget);
+    await tester.tap(find.text('Add Experience'));
+    await tester.pumpAndSettle();
 
-    // Menyimulasikan tombol Back sistem/browser.
-    await tester.binding.handlePopRoute();
+    expect(find.byType(ExperienceFormPage), findsOneWidget);
+    expect(
+      tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+      false,
+    );
+
+    // Drawer yang sama tersedia di halaman form, dan Home kembali ke menu.
+    await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ExperienceFormPage), findsNothing);
     expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
   });
 

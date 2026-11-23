@@ -1,4 +1,6 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:myportofolio_mobile/screens/experience_form.dart';
+import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
 
@@ -9,11 +11,23 @@ class MyHomePage extends StatelessWidget {
   final String nama = "Adinata Alaudin Pranaja";
   final String kelas = "PBP C";
 
-  // Warna memakai tingkat 700 (biru, hijau, merah) agar teks putih tetap
-  // kontras dan mudah dibaca di atas latar setiap kartu.
+  // Warna memakai tingkat 700 agar teks putih tetap kontras dan mudah dibaca
+  // di atas latar setiap kartu. Kartu yang membuka halaman lain menyimpan
+  // tujuannya di `destination`.
   static const List<ItemHomepage> items = [
     ItemHomepage("Lihat Experience", Icons.work_history, Color(0xFF1976D2)),
-    ItemHomepage("Tambah Experience", Icons.add_circle, Color(0xFF388E3C)),
+    ItemHomepage(
+      "Tambah Experience",
+      Icons.add_circle,
+      Color(0xFF388E3C),
+      destination: ExperienceFormPage.new,
+    ),
+    ItemHomepage(
+      "Tambah Proyek",
+      Icons.create_new_folder,
+      Color(0xFF7B1FA2),
+      destination: ProjectFormPage.new,
+    ),
     ItemHomepage("Logout", Icons.logout, Color(0xFFD32F2F)),
   ];
 
@@ -31,8 +45,9 @@ class MyHomePage extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: const LeftDrawer(),
-      // Body halaman utama dengan padding di sekelilingnya.
-      body: Padding(
+      // Body dapat digulir agar empat kartu menu tetap terjangkau di layar
+      // ponsel yang pendek.
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -66,13 +81,16 @@ class MyHomePage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // GridView menampilkan kartu tombol dalam tata letak kisi 3 kolom.
+                  // GridView menampilkan empat kartu tombol dalam kisi 2 kolom.
+                  // Penggulirannya diserahkan ke SingleChildScrollView di luar.
                   GridView.count(
-                    primary: true,
+                    primary: false,
+                    physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(20),
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    crossAxisCount: 3,
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.6,
                     // shrinkWrap agar ukuran kisi menyesuaikan tinggi konten anak.
                     shrinkWrap: true,
                     children: items.map((ItemHomepage item) {
@@ -118,14 +136,18 @@ class InfoCard extends StatelessWidget {
   }
 }
 
-/// Model data satu tombol menu: label, ikon, dan warna latar kartunya.
+/// Model data satu tombol menu: label, ikon, warna latar, dan halaman tujuan.
 ///
-/// Warna disimpan di model sehingga [ItemCard] cukup membaca [color]
-/// tanpa percabangan per tombol.
+/// Warna dan tujuan disimpan di model sehingga [ItemCard] cukup membaca
+/// [color] dan [destination] tanpa percabangan per nama tombol.
 class ItemHomepage {
   final String name;
   final IconData icon;
   final Color color;
 
-  const ItemHomepage(this.name, this.icon, this.color);
+  /// Pembuat halaman yang dibuka dengan `Navigator.push()`, atau `null` jika
+  /// tombol hanya menampilkan SnackBar.
+  final Widget Function()? destination;
+
+  const ItemHomepage(this.name, this.icon, this.color, {this.destination});
 }

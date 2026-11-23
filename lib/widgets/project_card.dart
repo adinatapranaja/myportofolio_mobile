@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:myportofolio_mobile/screens/menu.dart';
-import 'package:myportofolio_mobile/screens/project_form.dart';
 
 class ItemCard extends StatelessWidget {
   final ItemHomepage item;
@@ -25,12 +24,13 @@ class ItemCard extends StatelessWidget {
               ),
             );
 
-          // Navigate ke halaman yang sesuai. Sementara tombol tambah membuka
-          // formulir proyek dari tutorial; form Experience menyusul di Tugas 8.
-          if (item.name == "Tambah Experience") {
+          // push() menumpuk halaman tujuan di atas menu, sehingga tombol
+          // kembali bawaan perangkat membawa pengguna ke halaman ini lagi.
+          final destination = item.destination;
+          if (destination != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const ProjectFormPage()),
+              MaterialPageRoute(builder: (context) => destination()),
             );
           }
         },
