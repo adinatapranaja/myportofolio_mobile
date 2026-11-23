@@ -39,12 +39,14 @@ myportofolio_mobile/
 │   ├── main.dart                # Entry point: MyApp, MaterialApp, dan tema warna
 │   ├── screens/
 │   │   ├── menu.dart            # Halaman utama, InfoCard, dan ItemHomepage
+│   │   ├── experience_form.dart # Halaman formulir tambah pengalaman (Tugas 8)
 │   │   └── project_form.dart    # Halaman formulir tambah proyek
 │   └── widgets/
 │       ├── left_drawer.dart     # Drawer navigasi antarhalaman
 │       └── project_card.dart    # ItemCard: tombol menu, SnackBar, dan navigasi
 ├── test/
-│   └── widget_test.dart
+│   ├── widget_test.dart           # Halaman utama, kartu, drawer, dan navigasi
+│   └── experience_form_test.dart  # Validasi dan dialog formulir pengalaman
 ├── pubspec.yaml    # Manifes proyek dan dependency
 └── analysis_options.yaml
 ```
@@ -134,6 +136,25 @@ Implementasi Tugas 7 mengubah aplikasi contoh menjadi portofolio pribadi:
 5. `BuildContext` adalah penanda posisi sebuah widget di dalam widget tree. Setiap metode `build` menerima `context` miliknya sendiri, dan context ini dipakai untuk mencari widget atau data dari leluhurnya. Di proyek ini, `Theme.of(context)` membaca warna tema untuk `AppBar`, `MediaQuery.of(context)` membaca lebar layar untuk menghitung lebar `InfoCard`, dan `ScaffoldMessenger.of(context)` menemukan `Scaffold` terdekat untuk menampilkan `SnackBar` saat `ItemCard` ditekan. Context penting karena hasil pencarian bergantung pada posisinya. Context dari widget yang berada di atas `Scaffold` tidak dapat menemukan `Scaffold` tersebut.
 
 6. **Hot reload** menyuntikkan kode yang berubah ke Dart VM yang sedang berjalan, lalu membangun ulang widget tree tanpa menghapus state. Perubahan tampilan terlihat dalam hitungan detik dan, misalnya, nilai penghitung tidak kembali ke nol. **Hot restart** memuat ulang seluruh kode Dart dan menjalankan aplikasi dari awal dengan memanggil `main()` lagi, sehingga semua state hilang, tetapi tetap lebih cepat daripada kompilasi ulang penuh. Hot reload tidak cukup ketika perubahan menyentuh kode yang hanya dijalankan sekali atau struktur yang sudah tertanam di state, misalnya isi `main()` atau `initState()`, nilai awal variabel global dan `static`, perubahan widget dari `StatelessWidget` menjadi `StatefulWidget`, perubahan enum atau tipe generik, serta kesalahan kompilasi yang membuat reload gagal. Untuk kasus tersebut gunakan hot restart. *Full restart* (menghentikan lalu menjalankan ulang `flutter run`) diperlukan setelah mengubah kode native Android/iOS, menambah dependency atau aset di `pubspec.yaml`, atau mengganti konfigurasi platform.
+
+### Tugas 8
+
+Implementasi Tugas 8 menambahkan formulir **Tambah Experience** yang mengikuti model `Experience` pada proyek Django:
+
+- `lib/screens/experience_form.dart` berisi `ExperienceFormPage` (`StatefulWidget`) dengan `Form` dan `GlobalKey<FormState>`. Inputnya adalah role atau posisi, deskripsi, kategori (enam pilihan yang sama dengan `EXPERIENCE_CHOICES`), URL gambar opsional, tanggal mulai, saklar **Masih berlangsung**, dan tanggal selesai. Tanggal dipilih dengan `showDatePicker()`.
+- Validasi mengikuti aturan model: role dan deskripsi tidak boleh kosong atau hanya spasi, role maksimal 255 karakter, URL gambar harus berupa tautan `http`/`https` jika diisi, tanggal mulai wajib, dan tanggal selesai wajib kecuali pengalaman masih berlangsung serta tidak boleh sebelum tanggal mulai.
+- Tombol **Simpan** memanggil `validate()`. Jika lolos, `AlertDialog` menampilkan seluruh isian, lalu tombol **OK** menutup dialog dan mengosongkan formulir.
+- Halaman utama memiliki empat kartu dalam kisi dua kolom. **Tambah Experience** dan **Tambah Proyek** membuka formulirnya dengan `Navigator.push()`. Halaman tujuan disimpan sebagai atribut `destination` pada `ItemHomepage`, sehingga `ItemCard` tidak lagi mencocokkan nama tombol.
+- Drawer mendapat opsi **Add Experience** di samping **Home** dan **Add Project**, dan drawer yang sama dipakai pada halaman formulir.
+- Widget test mencakup pembukaan formulir dari kartu dan drawer, kembali dengan tombol Back maupun opsi **Home**, input kosong, URL dan urutan tanggal yang salah, isi dialog, serta tombol **Simpan** yang tetap terjangkau pada layar 360 × 480 saat papan ketik tampil.
+
+1. `Navigator.push()` menaruh halaman baru di atas tumpukan *route* sehingga halaman sebelumnya tetap tersimpan di bawahnya. `Navigator.pushReplacement()` mengganti halaman teratas dengan halaman baru, sehingga halaman lama dibuang dari tumpukan. `Navigator.pop()` membuang halaman teratas dan menampilkan kembali halaman di bawahnya. Kartu aksi **Tambah Experience** memakai `Navigator.push()`, sehingga tombol kembali bawaan perangkat atau tombol Back browser memanggil `pop()` dan mengembalikan pengguna ke menu. Opsi **Home** di drawer memakai `Navigator.pushReplacement()` dengan `MyHomePage`. Halaman formulir yang sedang tampil diganti oleh halaman utama baru, sehingga pengguna kembali ke menu tanpa menumpuk halaman. Akibatnya, setelah membuka formulir melalui drawer tidak ada lagi halaman di bawahnya, yang dibuktikan oleh widget test melalui `Navigator.canPop()` bernilai `false`.
+
+2. Setiap halaman memakai `Scaffold` sebagai kerangka yang sama: `AppBar` di bagian atas, `drawer` di sisi kiri, dan `body` untuk isi halaman. Karena halaman utama, formulir proyek, dan formulir pengalaman memakai widget `LeftDrawer` yang sama, menu navigasi selalu identik dan cukup diubah di satu berkas. `AppBar` juga menyediakan posisi judul serta ikon drawer yang konsisten. Contoh warna tema: `ColorScheme.fromSeed(seedColor: Colors.indigo)` pada `MaterialApp` dibaca melalui `Theme.of(context).colorScheme.primary` sebagai warna `AppBar` di halaman utama, serta sebagai warna `AppBar` dan tombol **Simpan** di halaman formulir pengalaman. Mengganti warna dasar tema akan mengubah ketiganya sekaligus.
+
+3. Formulir disusun sebagai satu kolom vertikal karena setiap input membutuhkan lebar penuh agar label, isi, dan pesan kesalahan mudah dibaca di layar ponsel, serta urutan pengisian berjalan dari atas ke bawah. `Padding` memberi jarak 8 piksel di sekitar setiap input dan di tepi layar agar elemen tidak saling menempel dan mudah disentuh. `SingleChildScrollView` membungkus `Column` sehingga isi formulir dapat digulir ketika tingginya melebihi layar, misalnya pada ponsel kecil atau ketika papan ketik muncul dan mengurangi ruang yang tersedia. Tanpa penggulir, `Column` akan mengalami *overflow* dan tombol **Simpan** bisa tertutup. Halaman utama juga dibungkus `SingleChildScrollView` agar kartu baris kedua tetap terjangkau.
+
+4. `GlobalKey<FormState>` memberi akses ke state widget `Form` dari luar pohon input, misalnya dari tombol **Simpan**. Setiap `TextFormField` memiliki `validator` yang menerima nilai input dan mengembalikan pesan kesalahan atau `null` jika valid. Saat **Simpan** ditekan, `_formKey.currentState!.validate()` menjalankan semua validator sekaligus, menampilkan pesan pada kolom yang tidak valid, dan mengembalikan `true` hanya jika semua kolom lolos. Dialog ringkasan hanya ditampilkan ketika nilai tersebut `true`. Contoh nilai yang ditolak adalah `javascript:alert(1)` pada kolom URL gambar. Kolom ini memakai `TextInputType.url`, tetapi jenis papan ketik hanya mengubah tombol yang ditampilkan dan tetap mengizinkan teks apa pun, termasuk hasil tempel. Validator memeriksa bahwa skema tautan adalah `http` atau `https` dan memiliki host, sehingga nilai tersebut ditolak. Contoh lain adalah tanggal selesai yang lebih awal dari tanggal mulai. `showDatePicker()` menjamin format tanggal benar, tetapi tidak mengetahui hubungan antara dua tanggal, sehingga urutannya tetap perlu diperiksa oleh validator.
 
 ### AI Disclosure
 Dalam pengerjaan project ini, saya menggunakan bantuan AI secara terbatas, yaitu untuk membantu merapikan format penulisan pada file README.md agar lebih terstruktur dan mudah dibaca, serta untuk mencari referensi dan tutorial dalam mengembangkan desain web yang saya buat. Seluruh proses pengembangan, logika, dan implementasi tetap saya kerjakan dan pahami sendiri.
