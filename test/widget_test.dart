@@ -7,11 +7,13 @@ import 'package:myportofolio_mobile/screens/menu.dart';
 import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
 
+import 'helpers/fake_api.dart';
+
 void main() {
   testWidgets('Home page shows owner info and menu buttons', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     expect(find.text('MyPortfolio'), findsOneWidget);
     expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
@@ -36,7 +38,7 @@ void main() {
   testWidgets('Each menu button has its own background color', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     final colors = [
       for (final item in MyHomePage.items)
@@ -58,7 +60,7 @@ void main() {
   testWidgets('Tapping each menu button shows a matching SnackBar', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     for (final item in MyHomePage.items) {
       await tester.ensureVisible(find.text(item.name));
@@ -83,7 +85,7 @@ void main() {
     testWidgets('$button card pushes its form and Back returns to the menu', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const MyApp());
+      await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
       await tester.ensureVisible(find.text(button));
       await tester.tap(find.text(button));
@@ -108,7 +110,7 @@ void main() {
   testWidgets('Drawer Add Experience opens the form and Home returns', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
@@ -135,7 +137,7 @@ void main() {
   testWidgets('Drawer Add Project replaces the page with the form', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
@@ -205,7 +207,7 @@ void main() {
   testWidgets('Drawer opens and Home returns to the menu page', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
