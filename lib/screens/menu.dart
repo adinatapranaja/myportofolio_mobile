@@ -21,12 +21,14 @@ class MyHomePage extends StatelessWidget {
       Icons.add_circle,
       Color(0xFF388E3C),
       destination: ExperienceFormPage.new,
+      requiresLogin: true,
     ),
     ItemHomepage(
       "Tambah Proyek",
       Icons.create_new_folder,
       Color(0xFF7B1FA2),
       destination: ProjectFormPage.new,
+      requiresLogin: true,
     ),
     ItemHomepage("Logout", Icons.logout, Color(0xFFD32F2F)),
   ];
@@ -149,5 +151,14 @@ class ItemHomepage {
   /// tombol hanya menampilkan SnackBar.
   final Widget Function()? destination;
 
-  const ItemHomepage(this.name, this.icon, this.color, {this.destination});
+  /// Whether [destination] needs a logged-in user (checked by `ensureLoggedIn`).
+  final bool requiresLogin;
+
+  const ItemHomepage(
+    this.name,
+    this.icon,
+    this.color, {
+    this.destination,
+    this.requiresLogin = false,
+  });
 }

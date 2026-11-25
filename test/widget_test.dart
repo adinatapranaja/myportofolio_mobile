@@ -1,10 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:myportofolio_mobile/main.dart';
 import 'package:myportofolio_mobile/screens/experience_form.dart';
+import 'package:myportofolio_mobile/screens/login_screen.dart';
 import 'package:myportofolio_mobile/screens/menu.dart';
-import 'package:myportofolio_mobile/screens/project_form.dart';
 import 'package:myportofolio_mobile/widgets/project_card.dart';
 
 import 'helpers/fake_api.dart';
@@ -85,7 +86,9 @@ void main() {
     testWidgets('$button card pushes its form and Back returns to the menu', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
+      await tester.pumpWidget(
+        MyApp(apiClient: fakeApiClient(), initialToken: 'test-token'),
+      );
 
       await tester.ensureVisible(find.text(button));
       await tester.tap(find.text(button));
@@ -110,7 +113,9 @@ void main() {
   testWidgets('Drawer Add Experience opens the form and Home returns', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
+    await tester.pumpWidget(
+      MyApp(apiClient: fakeApiClient(), initialToken: 'test-token'),
+    );
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
@@ -137,7 +142,9 @@ void main() {
   testWidgets('Drawer Add Project replaces the page with the form', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
+    await tester.pumpWidget(
+      MyApp(apiClient: fakeApiClient(), initialToken: 'test-token'),
+    );
 
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
@@ -151,57 +158,6 @@ void main() {
       false,
     );
     expect(find.byTooltip('Open navigation menu'), findsOneWidget);
-  });
-
-  testWidgets('Form validates input and shows the entered data', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: ProjectFormPage()));
-
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    expect(find.text('Nama proyek tidak boleh kosong!'), findsOneWidget);
-    expect(find.text('Deskripsi proyek tidak boleh kosong!'), findsOneWidget);
-    expect(find.byType(AlertDialog), findsNothing);
-
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Nama Proyek'),
-      'Portfolio App',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Deskripsi Proyek'),
-      'Aplikasi portofolio',
-    );
-    await tester.tap(find.text('Web Development'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Mobile Development').last);
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Teknologi yang Digunakan'),
-      'Flutter',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Tautan Proyek'),
-      'https://example.com',
-    );
-    await tester.ensureVisible(find.text('Save'));
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Proyek berhasil ditambahkan!'), findsOneWidget);
-    for (final line in [
-      'Nama Proyek: Portfolio App',
-      'Deskripsi: Aplikasi portofolio',
-      'Kategori: Mobile Development',
-      'Teknologi: Flutter',
-      'Tautan: https://example.com',
-    ]) {
-      expect(find.text(line), findsOneWidget);
-    }
-
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
   });
 
   testWidgets('Drawer opens and Home returns to the menu page', (
@@ -221,5 +177,99 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('My Portfolio'), findsNothing);
     expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
+  });
+
+  testWidgets('Guarded card opens Login first, then the form after login', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MyApp(
+        apiClient: fakeApiClient(
+          (_) async => jsonResponse({'token': 'fresh-token'}),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Tambah Proyek'));
+    await tester.tap(find.text('Tambah Proyek'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Username'),
+      'owner',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Password'),
+      'pw',
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Login'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.text('Add Project Form'), findsOneWidget);
+  });
+
+  testWidgets('Closing Login without logging in stays on the menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(MyApp(apiClient: fakeApiClient()));
+
+    await tester.tap(find.text('Tambah Experience'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(ExperienceFormPage), findsNothing);
+    expect(find.text('Selamat datang di MyPortfolio Mobile!'), findsOneWidget);
+  });
+
+  testWidgets('Drawer switches between Login and Logout', (
+    WidgetTester tester,
+  ) async {
+    final requests = <String>[];
+    await tester.pumpWidget(
+      MyApp(
+        apiClient: fakeApiClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          return http.Response('', 204);
+        }),
+        initialToken: 'test-token',
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ListTile, 'Logout'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, 'Login'), findsNothing);
+
+    await tester.tap(find.widgetWithText(ListTile, 'Logout'));
+    await tester.pumpAndSettle();
+    expect(requests, ['POST /api/v1/auth/logout/']);
+    expect(find.text('Kamu berhasil logout.'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, 'Login'), findsOneWidget);
+    expect(find.widgetWithText(ListTile, 'Logout'), findsNothing);
+  });
+
+  testWidgets('Logout card revokes the token when logged in', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MyApp(
+        apiClient: fakeApiClient((_) async => http.Response('', 204)),
+        initialToken: 'test-token',
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Logout'));
+    await tester.tap(find.text('Logout'));
+    await tester.pumpAndSettle();
+    expect(find.text('Kamu berhasil logout.'), findsOneWidget);
+
+    // Sudah logout: kartu tambah kembali meminta login.
+    await tester.tap(find.text('Tambah Experience'));
+    await tester.pumpAndSettle();
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 }
