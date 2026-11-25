@@ -16,38 +16,69 @@ flutter doctor
 # Ambil dependency
 flutter pub get
 
-# Jalankan di Google Chrome
-flutter run -d chrome
+# Hasilkan kode serialisasi JSON (*.g.dart tidak disimpan di Git)
+dart run build_runner build --delete-conflicting-outputs
+
+# Jalankan di Google Chrome terhadap Django lokal
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
 ```
 
-Untuk menjalankan di emulator Android atau perangkat fisik, gunakan `flutter run` setelah Android toolchain pada `flutter doctor` bertanda centang.
+Aplikasi membaca alamat backend dari `--dart-define=API_BASE_URL`. Tanpa nilai tersebut, aplikasi memakai `http://10.0.2.2:8000`, yaitu alamat komputer pengembang jika dilihat dari emulator Android. Jalankan backend Django ([myportofolio](https://github.com/adinatapranaja/myportofolio)) dengan `python manage.py runserver` sebelum membuka aplikasi.
+
+| Target | Perintah |
+| --- | --- |
+| Chrome + Django lokal | `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000` |
+| Emulator Android + Django lokal | `flutter run` |
+| Perangkat Android fisik (USB) | `adb reverse tcp:8000 tcp:8000`, lalu `flutter run --dart-define=API_BASE_URL=http://localhost:8000` |
+| Backend yang sudah di-deploy | `flutter run --dart-define=API_BASE_URL=https://<domain-django>` |
+
+Untuk menjalankan di emulator Android atau perangkat fisik, pastikan Android toolchain pada `flutter doctor` sudah bertanda centang.
 
 ## Pemeriksaan cepat
 
-Jalankan analisis statis dan widget test sebelum commit:
+Jalankan pemeriksaan yang sama dengan CI sebelum commit:
 
 ```bash
+dart format --set-exit-if-changed .
 flutter analyze
 flutter test
 ```
+
+Test memakai `MockClient` dari paket `http`, sehingga tidak membutuhkan server Django yang sedang berjalan.
 
 ## Struktur proyek
 
 ```text
 myportofolio_mobile/
 ├── lib/
-│   ├── main.dart                # Entry point: MyApp, MaterialApp, dan tema warna
+│   ├── main.dart                    # Entry point: MultiProvider, MaterialApp, dan tema warna
+│   ├── config.dart                  # API_BASE_URL dari --dart-define
+│   ├── models/
+│   │   └── project.dart             # Model Project (@JsonSerializable)
+│   ├── services/
+│   │   ├── api_client.dart          # ApiClient dan ApiException untuk API DRF
+│   │   └── auth_state.dart          # AuthState: token login di memori
 │   ├── screens/
-│   │   ├── menu.dart            # Halaman utama, InfoCard, dan ItemHomepage
-│   │   ├── experience_form.dart # Halaman formulir tambah pengalaman (Tugas 8)
-│   │   └── project_form.dart    # Halaman formulir tambah proyek
+│   │   ├── menu.dart                # Halaman utama, InfoCard, dan ItemHomepage
+│   │   ├── experience_form.dart     # Halaman formulir tambah pengalaman (Tugas 8)
+│   │   ├── login_screen.dart        # Halaman login token
+│   │   ├── project_detail_screen.dart # Detail satu proyek
+│   │   ├── project_form.dart        # Formulir tambah proyek (POST ke API)
+│   │   └── project_list_screen.dart # Daftar proyek dari API
 │   └── widgets/
-│       ├── left_drawer.dart     # Drawer navigasi antarhalaman
-│       └── project_card.dart    # ItemCard: tombol menu, SnackBar, dan navigasi
+│       ├── auth_guard.dart          # ensureLoggedIn(): meminta login sebelum aksi terlindungi
+│       ├── left_drawer.dart         # Drawer navigasi, Login, dan Logout
+│       └── project_card.dart        # ItemCard: tombol menu, SnackBar, dan navigasi
 ├── test/
-│   ├── widget_test.dart           # Halaman utama, kartu, drawer, dan navigasi
-│   └── experience_form_test.dart  # Validasi dan dialog formulir pengalaman
-├── pubspec.yaml    # Manifes proyek dan dependency
+│   ├── helpers/fake_api.dart        # ApiClient palsu berbasis MockClient
+│   ├── widget_test.dart             # Halaman utama, kartu, drawer, guard, dan navigasi
+│   ├── api_client_test.dart         # Request dan parsing ApiClient
+│   ├── project_list_screen_test.dart # Daftar, detail, kosong, dan error
+│   ├── project_form_test.dart       # Validasi, POST bertoken, 401, dan 403
+│   ├── login_screen_test.dart       # Validasi dan kegagalan login
+│   └── experience_form_test.dart    # Validasi dan dialog formulir pengalaman
+├── .github/workflows/main.yaml      # GitHub Actions: CI dan build APK
+├── pubspec.yaml                     # Manifes proyek dan dependency
 └── analysis_options.yaml
 ```
 
@@ -94,6 +125,36 @@ Beberapa penyesuaian dari contoh tutorial:
 - Widget test ditambah untuk memeriksa drawer, perbedaan `push()` dan `pushReplacement()` melalui `Navigator.canPop()`, validasi formulir, serta isi dialog. Tidak ada komentar `TODO` yang tersisa.
 
 Sumber: [Tutorial 9 PBP](https://pbp.cs.ui.ac.id/tutorial/tutorial-9.html).
+
+### Tutorial 10 — Flutter Backend Integration, Authentication, and CI/CD
+
+Tutorial 10 menghubungkan aplikasi dengan REST API Django dari Tutorial 7, menambahkan login berbasis token, dan menyiapkan CI/CD.
+
+**Backend Django.** Repositori `myportofolio` mengaktifkan `rest_framework.authtoken` dan `django-cors-headers`. `TokenAuthentication` diletakkan sebelum `SessionAuthentication`, sehingga permintaan tanpa token dijawab `401`, sedangkan halaman web tetap memakai session dan CSRF. Endpoint `POST /api/v1/auth/token/` menukar username dan password menjadi token, dan `POST /api/v1/auth/logout/` mencabut token tersebut (`204`). CORS diizinkan untuk semua origin saat pengembangan lokal agar Flutter Web dapat memanggil API.
+
+**Model dan ApiClient.**
+
+1. Paket `http`, `provider`, dan `json_annotation` ditambahkan, bersama `build_runner` dan `json_serializable` untuk menghasilkan kode. Berkas `*.g.dart` dikecualikan dari Git dan dari `flutter analyze`.
+2. Android mendapat izin `INTERNET` dan `usesCleartextTraffic` untuk HTTP lokal selama pengembangan.
+3. Model `Project` memakai `@JsonSerializable(fieldRename: FieldRename.snake)`, sehingga `repositoryUrl` di Dart menjadi `repository_url` di JSON. `id` tidak dikirim saat POST karena UUID dibuat oleh Django.
+4. `ApiClient` di `lib/services/` memisahkan pemanggilan jaringan dari tampilan. Respons non-2xx dilempar sebagai `ApiException` berisi status code. Nama header ditulis sebagai string biasa, bukan `HttpHeaders` dari `dart:io`, agar tetap berjalan di Flutter Web.
+
+**Daftar dan detail proyek.** `ProjectListScreen` membuat `Future` di `initState()` agar permintaan HTTP tidak dikirim ulang setiap kali widget dibangun ulang. `FutureBuilder` menangani keadaan memuat, gagal (dengan tombol **Retry**), kosong, dan berisi data, sedangkan `RefreshIndicator` memuat ulang daftar dengan gestur tarik. Halaman ini dapat dibuka tanpa login melalui opsi **Projects** di drawer, dan setiap kartu membuka `ProjectDetailScreen`.
+
+**Autentikasi dan route guard.** `AuthState` (`ChangeNotifier`) menyimpan token di memori dan disediakan ke seluruh aplikasi bersama `ApiClient` melalui `MultiProvider`. `ensureLoggedIn()` membuka `LoginScreen` ketika pengguna belum login dan melanjutkan ke halaman tujuan setelah login berhasil. Guard ini melindungi kartu dan opsi drawer **Tambah/Add Project** serta **Tambah/Add Experience**. Drawer memakai `context.watch<AuthState>()` agar opsi **Login** dan **Logout** berganti secara otomatis, dan kartu **Logout** kini mencabut token.
+
+**Formulir proyek.** Field disesuaikan dengan `ProjectSerializer`: Title, Description, Technologies, serta Project URL dan Repository URL yang opsional dan divalidasi sebagai tautan `http`/`https`. Tombol **Save** mengirim `POST /api/v1/projects/` dengan header `Authorization: Token <key>`. Respons `201` ditampilkan dalam dialog. Respons `401` menghapus token dan meminta login ulang, `403` menampilkan pesan bahwa hanya pemilik yang dapat menambah proyek, dan kesalahan lain ditampilkan melalui `SnackBar`.
+
+**CI/CD.** `.github/workflows/main.yaml` menjalankan job `build` dari `very_good_workflows` (`build_runner`, `dart format`, `flutter analyze`, dan test dengan coverage). Setelah `build` lulus, job `build_apk` membangun APK rilis dengan `--dart-define=API_BASE_URL=${{ vars.API_BASE_URL }}` lalu mengunggah `app-release.apk` sebagai artefak `app-release-apk`. Nilai `API_BASE_URL` disimpan sebagai *repository variable* di **Settings → Secrets and variables → Actions → Variables**.
+
+Beberapa penyesuaian dari contoh tutorial:
+
+- Model `Project` mengikuti serializer Django proyek ini, yaitu `technologies` dan `repository_url`, bukan `tech_stack` dan `project_image_url`. Karena model tidak memiliki URL gambar, halaman detail menampilkan Project URL dan Repository URL jika tidak kosong.
+- Decorator `@authentication_classes([SessionAuthentication])` dihapus dari semua view API, termasuk Experience, agar pengaturan autentikasi global berlaku. Test Django disesuaikan karena tamu kini menerima `401`, sedangkan pengguna login tanpa hak akses tetap menerima `403`.
+- Versi Flutter pada GitHub Actions dikunci ke 3.50.0, sama dengan versi lokal, karena proyek bergantung pada paket `material_ui`.
+- Widget test tidak dihapus. Test lama disesuaikan dengan `MyApp(apiClient: ...)`, dan test baru memakai `MockClient` untuk `ApiClient`, daftar dan detail proyek, login, guard, logout, serta POST bertoken dengan respons `201`, `401`, dan `403`.
+
+Sumber: [Tutorial 10 PBP](https://pbp.cs.ui.ac.id/tutorial/tutorial-10.html).
 
 ## Refleksi
 
